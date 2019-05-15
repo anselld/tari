@@ -47,20 +47,19 @@ bitflags! {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub enum NodeDestination<PubKey>
-where PubKey: PublicKey
-{
+pub enum NodeDestination<PubKey> {
     Unknown,
+    //#[serde(bound = "PubKey: PublicKey")]
     PublicKey(PubKey),
     NodeId(NodeId),
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct MessageEnvelopeHeader<PubKey>
-where PubKey: PublicKey
-{
+pub struct MessageEnvelopeHeader<PubKey> {
     version: u8,
+    //#[serde(bound = "PubKey: PublicKey")]
     source: PubKey,
+    //#[serde(bound = "PubKey: PublicKey")]
     dest: NodeDestination<PubKey>,
     signature: Vec<u8>,
     flags: IdentityFlags,

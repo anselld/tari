@@ -25,9 +25,14 @@
 //! implementation of ECC curve). The idea being that we can swap out the underlying
 //! implementation without worrying too much about the impact on upstream code.
 
+
 use rand::{CryptoRng, Rng};
-use std::ops::Add;
-use tari_utilities::ByteArray;
+use serde::{
+    de::{Deserialize, DeserializeOwned, Deserializer, Visitor},
+    ser::Serialize,
+};
+use std::{fmt, ops::Add};
+use tari_utilities::{hex::Hex, ByteArray};
 
 /// A trait specifying common behaviour for representing `SecretKey`s. Specific elliptic curve
 /// implementations need to implement this trait for them to be used in Tari.
@@ -54,7 +59,10 @@ pub trait SecretKey: ByteArray + Clone + PartialEq + Eq + Add<Output = Self> + D
 /// implementations need to implement this trait for them to be used in Tari.
 ///
 /// See [SecretKey](trait.SecretKey.html) for an example.
-pub trait PublicKey: ByteArray + Add<Output = Self> + Clone + PartialOrd + Ord + Default {
+pub trait PublicKey:
+    ByteArray + Add<Output = Self> + Clone + PartialOrd + Ord + Default + Serialize + Hex + Sized + DeserializeOwned
+//+ Deserialize<'de>
+{
     type K: SecretKey;
     /// Calculate the public key associated with the given secret key. This should not fail; if a
     /// failure does occur (implementation error?), the function will panic.
@@ -69,4 +77,31 @@ pub trait PublicKey: ByteArray + Add<Output = Self> + Clone + PartialOrd + Ord +
         let pk = Self::from_secret_key(&k);
         (k, pk)
     }
+
 }
+// struct DeserializePKVisitor;
+
+// impl<'de> Visitor<'de> for DeserializePKVisitor {
+//     type Value = PublicKey;
+
+//     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//         formatter.write_str("expecting a hex string")
+//     }
+
+//     fn visit_str<E>(self, str_data: &str) -> Result<Self::Value, E>
+//     where E: serde::de::Error {
+//         match PublicKey::from_hex(str_data) {
+//             Ok(k) => Ok(k),
+//             Err(parse_error) => Err(E::custom(format!("SecretKey parser error: {}", parse_error))),
+//         }
+//     }
+// }
+
+// impl<'de, T> Deserialize<'de> for T
+// where T: PublicKey
+// {
+//     fn deserialize<D>(deserializer: D) -> Result<T, D::Error>
+//     where D: Deserializer<'de> {
+//         deserializer.deserialize_string(DeserializePKVisitor)
+//     }
+// }
