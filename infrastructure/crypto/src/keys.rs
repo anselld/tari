@@ -60,7 +60,7 @@ pub trait SecretKey: ByteArray + Clone + PartialEq + Eq + Add<Output = Self> + D
 ///
 /// See [SecretKey](trait.SecretKey.html) for an example.
 pub trait PublicKey:
-    ByteArray + Add<Output = Self> + Clone + PartialOrd + Ord + Default + Serialize + Hex + Sized + DeserializeOwned
+    ByteArray + Add<Output = Self> + Clone + PartialOrd + Ord + Default + Serialize + DeserializeOwned
 //+ Deserialize<'de>
 {
     type K: SecretKey;
@@ -79,29 +79,3 @@ pub trait PublicKey:
     }
 
 }
-// struct DeserializePKVisitor;
-
-// impl<'de> Visitor<'de> for DeserializePKVisitor {
-//     type Value = PublicKey;
-
-//     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-//         formatter.write_str("expecting a hex string")
-//     }
-
-//     fn visit_str<E>(self, str_data: &str) -> Result<Self::Value, E>
-//     where E: serde::de::Error {
-//         match PublicKey::from_hex(str_data) {
-//             Ok(k) => Ok(k),
-//             Err(parse_error) => Err(E::custom(format!("SecretKey parser error: {}", parse_error))),
-//         }
-//     }
-// }
-
-// impl<'de, T> Deserialize<'de> for T
-// where T: PublicKey
-// {
-//     fn deserialize<D>(deserializer: D) -> Result<T, D::Error>
-//     where D: Deserializer<'de> {
-//         deserializer.deserialize_string(DeserializePKVisitor)
-//     }
-// }
