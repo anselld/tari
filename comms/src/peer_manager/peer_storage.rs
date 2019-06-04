@@ -28,6 +28,7 @@ use std::{collections::HashMap, hash::Hash, ops::Index, time::Duration};
 use tari_crypto::keys::{PublicKey, SecretKey};
 use tari_storage::keyvalue_store::DataStore;
 use tari_utilities::message_format::MessageFormat;
+use crate::peer_manager::node_id::NodeDistance;
 
 /// PeerStorage provides a mechanism to keep a datastore and a local copy of all peers in sync and allow fast searches
 /// using the node_id, public key or net_address of a peer.
@@ -173,14 +174,36 @@ where
     /// Compile a list of node identities that can be used for the closest BroadcastStrategy
     pub fn closest_identities<SecKey: SecretKey>(
         &self,
-        _n: u32,
+        node_id: NodeId,
+        n: usize,
     ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
     {
-        let identities: Vec<NodeIdentity<PubKey, SecKey>> = Vec::new();
-
-        // TODO: Send to all n nearest neighbour Communication Nodes
-
-        Ok(identities)
+        let peer_count=self.peers.len();
+        if n > peer_count {
+            return Err(PeerManagerError::InsufficientPeers);
+        }
+        let mut indices: Vec<usize> = Vec::with_capacity(peer_count);
+        let mut dists: Vec<NodeDistance> = Vec::with_capacity(peer_count);
+        for i in 0..peer_count {
+            indices.push(i);
+            dists.push(node_id.distance(&self.peers[i].node_id));
+        }
+        // Perform partial sort of elements only up to N elements
+        let mut nearest_identities: Vec<NodeIdentity<PubKey, SecKey>> = Vec::with_capacity(n);
+        for i in 0..n {
+            for j in i + 1..peer_count{
+                if dists[i] > dists[j] {
+                    dists.swap(i, j);
+                    indices.swap(i, j);
+                }
+            }
+            nearest_identities.push(NodeIdentity::<PubKey, SecKey>::new(
+                self.peers[indices[i]].node_id.clone(),
+                self.peers[indices[i]].public_key.clone(),
+                None,
+            ));
+        }
+        Ok(nearest_identities)
     }
 
     /// Compile a list of node identities that can be used for the random BroadcastStrategy

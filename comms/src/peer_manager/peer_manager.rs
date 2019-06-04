@@ -51,6 +51,8 @@ pub enum PeerManagerError {
     EmptyDatastoreQuery,
     /// The data update could not be performed
     DataUpdateError,
+    /// The PeerManager doesn't have enough peers to fill the identity request
+    InsufficientPeers
 }
 
 /// The PeerManager consist of a routing table of previously discovered peers.
@@ -138,12 +140,12 @@ where
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
                     .flood_identities::<SecKey>()
             },
-            BroadcastStrategy::Closest(n) => {
+            BroadcastStrategy::Closest(closest_request) => {
                 // Send to all n nearest neighbour Communication Nodes
                 self.peer_storage
                     .read()
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
-                    .closest_identities::<SecKey>(n)
+                    .closest_identities::<SecKey>(closest_request.node_id,closest_request.n)
             },
             BroadcastStrategy::Random(n) => {
                 // Send to a random set of peers of size n that are Communication Nodes
