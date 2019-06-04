@@ -43,7 +43,7 @@ use serde::Serialize;
 use std::{
     hash::Hash,
     ops::Mul,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
 use tari_crypto::{
     keys::{DiffieHellmanSharedSecret, PublicKey, SecretKey},
@@ -89,7 +89,7 @@ pub struct OutboundMessageService<PubKey, SecKey, DS> {
     context: Context,
     outbound_address: InprocAddress,
     node_identity: Arc<NodeIdentity<PubKey, SecKey>>,
-    peer_manager: RwLock<PeerManager<PubKey, DS>>,
+    peer_manager: Arc<PeerManager<PubKey, DS>>,
 }
 
 impl<PubKey, SecKey, DS> OutboundMessageService<PubKey, SecKey, DS>
@@ -104,7 +104,7 @@ where
         outbound_address: InprocAddress, /* The outbound_address is an inproc that connects the OutboundMessagePool
                                           * and the OutboundMessageService */
         node_identity: Arc<NodeIdentity<PubKey, SecKey>>,
-        peer_manager: RwLock<PeerManager<PubKey, DS>>,
+        peer_manager: Arc<PeerManager<PubKey, DS>>,
     ) -> OutboundMessageService<PubKey, SecKey, DS>
     {
         OutboundMessageService {
@@ -172,8 +172,6 @@ where
         // personalised message to each selected peer
         let selected_node_identities = self
             .peer_manager
-            .read()
-            .map_err(|_| OutboundError::PoisonedAccess)?
             .get_broadcast_identities::<SecKey>(broadcast_strategy)
             .map_err(|e| OutboundError::BroadcastStrategyError(e))?;
         for dest_node_identity in &selected_node_identities {
@@ -273,8 +271,8 @@ mod test {
             Peer::<RistrettoPublicKey>::new(pk, node_id, net_addresses, PeerFlags::default());
 
         // Setup OutboundMessageService and transmit a message to the destination
-        let peer_manager = RwLock::new(PeerManager::new(None).unwrap());
-        assert!(peer_manager.write().unwrap().add_peer(dest_peer.clone()).is_ok());
+        let peer_manager = Arc::new(PeerManager::new(None).unwrap());
+        assert!(peer_manager.add_peer(dest_peer.clone()).is_ok());
 
         let outbound_message_service = OutboundMessageService::<RistrettoPublicKey, RistrettoSecretKey, LMDBStore>::new(
             context,

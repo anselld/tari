@@ -147,12 +147,19 @@ where
         node_id: &NodeId,
     ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
     {
-        let public_key = self.find_with_node_id(&node_id)?.public_key;
-        Ok(vec![NodeIdentity::<PubKey, SecKey>::new(
-            node_id.clone(),
-            public_key,
-            None,
-        )])
+        let peer_index = *self
+            .node_id_hm
+            .get(&node_id)
+            .ok_or(PeerManagerError::PeerNotFoundError)?;
+        if self.peers[peer_index].is_banned() {
+            Err(PeerManagerError::BannedPeer)
+        } else {
+            Ok(vec![NodeIdentity::<PubKey, SecKey>::new(
+                node_id.clone(),
+                self.peers[peer_index].public_key.clone(),
+                None,
+            )])
+        }
     }
 
     /// Compile a list of all known node identities that can be used for the flood BroadcastStrategy

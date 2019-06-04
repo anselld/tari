@@ -52,7 +52,9 @@ pub enum PeerManagerError {
     /// The data update could not be performed
     DataUpdateError,
     /// The PeerManager doesn't have enough peers to fill the identity request
-    InsufficientPeers
+    InsufficientPeers,
+    /// The peer has been banned
+    BannedPeer,
 }
 
 /// The PeerManager consist of a routing table of previously discovered peers.
@@ -81,7 +83,7 @@ where
 
     /// Adds a peer to the routing table of the PeerManager if the peer does not already exist. When a peer already
     /// exist, the stored version will be replaced with the newly provided peer.
-    pub fn add_peer(&mut self, peer: Peer<PubKey>) -> Result<(), PeerManagerError> {
+    pub fn add_peer(&self, peer: Peer<PubKey>) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -89,7 +91,7 @@ where
     }
 
     /// The peer with the specified public_key will be removed from the PeerManager
-    pub fn delete_peer(&mut self, node_id: &NodeId) -> Result<(), PeerManagerError> {
+    pub fn delete_peer(&self, node_id: &NodeId) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -158,7 +160,7 @@ where
     }
 
     /// Thread safe access to peer - Changes the ban flag bit of the peer
-    pub fn set_banned(&mut self, node_id: &NodeId, ban_flag: bool) -> Result<(), PeerManagerError> {
+    pub fn set_banned(&self, node_id: &NodeId, ban_flag: bool) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -166,7 +168,7 @@ where
     }
 
     /// Thread safe access to peer - Adds a new net address to the peer if it doesn't yet exist
-    pub fn add_net_address(&mut self, node_id: &NodeId, net_address: &NetAddress) -> Result<(), PeerManagerError> {
+    pub fn add_net_address(&self, node_id: &NodeId, net_address: &NetAddress) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -175,7 +177,7 @@ where
 
     /// Thread safe access to peer - Finds and returns the highest priority net address until all connection attempts
     /// for each net address have been reached
-    pub fn get_best_net_address(&mut self, node_id: &NodeId) -> Result<NetAddress, PeerManagerError> {
+    pub fn get_best_net_address(&self, node_id: &NodeId) -> Result<NetAddress, PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -197,7 +199,7 @@ where
     }
 
     /// Thread safe access to peer - Mark that a message was received from the specified net address
-    pub fn mark_message_received(&mut self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
+    pub fn mark_message_received(&self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -205,7 +207,7 @@ where
     }
 
     /// Thread safe access to peer - Mark that a rejected message was received from the specified net address
-    pub fn mark_message_rejected(&mut self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
+    pub fn mark_message_rejected(&self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -213,7 +215,7 @@ where
     }
 
     /// Thread safe access to peer - Mark that a successful connection was established with the specified net address
-    pub fn mark_successful_connection_attempt(&mut self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
+    pub fn mark_successful_connection_attempt(&self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
@@ -221,7 +223,7 @@ where
     }
 
     /// Thread safe access to peer - Mark that a connection could not be established with the specified net address
-    pub fn mark_failed_connection_attempt(&mut self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
+    pub fn mark_failed_connection_attempt(&self, net_address: &NetAddress) -> Result<(), PeerManagerError> {
         self.peer_storage
             .write()
             .map_err(|_| PeerManagerError::PoisonedAccess)?
