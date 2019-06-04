@@ -27,7 +27,13 @@ use std::{sync::RwLock, thread, time::Duration};
 
 use std::sync::Arc;
 use tari_comms::{
-    connection::{Connection, Context, CurveEncryption, Direction, InprocAddress, Linger},
+    connection::{
+        types::{Direction, Linger},
+        Connection,
+        Context,
+        CurveEncryption,
+        InprocAddress,
+    },
     connection_manager::{ConnectionManager, PeerConnectionConfig},
     control_service::{ControlService, ControlServiceConfig, ControlServiceError, ControlServiceMessageContext},
     dispatcher::{DispatchError, DispatchResolver, Dispatcher},

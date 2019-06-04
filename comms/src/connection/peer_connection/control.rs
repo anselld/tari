@@ -22,7 +22,7 @@
 
 use std::{convert::From, fmt, sync::mpsc::SyncSender};
 
-use crate::{connection::Result, message::FrameSet};
+use crate::{connection::types::Result, message::FrameSet};
 
 use super::PeerConnectionError;
 

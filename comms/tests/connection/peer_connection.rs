@@ -23,13 +23,12 @@
 use crate::support::utils::find_available_tcp_net_address;
 use std::time::Duration;
 use tari_comms::connection::{
+    types::{Direction, Linger},
     Connection,
     ConnectionError,
     Context,
     CurveEncryption,
-    Direction,
     InprocAddress,
-    Linger,
     PeerConnection,
     PeerConnectionContextBuilder,
     PeerConnectionError,

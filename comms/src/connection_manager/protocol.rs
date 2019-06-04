@@ -29,11 +29,10 @@ use tari_utilities::{chacha20, message_format::MessageFormat, ByteArray};
 use crate::{
     connection::{
         connection::EstablishedConnection,
+        types::{Direction, Linger},
         Connection,
         CurveEncryption,
         CurvePublicKey,
-        Direction,
-        Linger,
         NetAddress,
         PeerConnection,
     },

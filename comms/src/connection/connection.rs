@@ -23,11 +23,9 @@
 use crate::{
     connection::{
         net_address::ip::SocketAddress,
-        types::{Direction, Linger, SocketType},
+        types::{Direction, Linger, Result, SocketEstablishment, SocketType},
         zmq::{Context, CurveEncryption, InprocAddress, ZmqEndpoint},
         ConnectionError,
-        Result,
-        SocketEstablishment,
     },
     message::FrameSet,
 };

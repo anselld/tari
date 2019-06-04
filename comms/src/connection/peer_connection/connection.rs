@@ -28,7 +28,7 @@ use std::{
 };
 
 use crate::{
-    connection::{ConnectionError, Result},
+    connection::{types::Result, ConnectionError},
     message::FrameSet,
 };
 

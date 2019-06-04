@@ -41,10 +41,9 @@ use crate::{
             PeerConnectionContext,
             PeerConnectionError,
         },
-        types::Direction,
+        types::{Direction, Result},
         ConnectionError,
         InprocAddress,
-        Result,
     },
     message::{Frame, FrameSet},
 };

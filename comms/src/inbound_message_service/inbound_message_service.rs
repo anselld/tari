@@ -127,8 +127,8 @@ mod test {
     use crate::{
         connection::{
             connection::EstablishedConnection,
+            types::SocketType,
             zmq::{Context, InprocAddress, ZmqEndpoint},
-            SocketType,
         },
         dispatcher::DispatchError,
         inbound_message_service::comms_msg_handlers::*,

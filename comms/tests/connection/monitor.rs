@@ -25,8 +25,8 @@ use std::{thread, time::Duration};
 use tari_comms::connection::{
     connection::Connection,
     monitor::{ConnectionMonitor, SocketEventType},
+    types::Direction,
     zmq::{Context, ZmqEndpoint},
-    Direction,
     InprocAddress,
 };
 

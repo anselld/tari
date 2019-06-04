@@ -32,9 +32,9 @@ use crate::{
     connection::{
         connection::EstablishedConnection,
         monitor::{ConnectionMonitor, SocketEvent, SocketEventType},
+        types::Direction,
         Connection,
         Context,
-        Direction,
         InprocAddress,
     },
     connection_manager::ConnectionManager,

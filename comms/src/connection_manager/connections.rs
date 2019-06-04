@@ -31,9 +31,9 @@ use crate::{
         self,
         curve_keypair::{CurvePublicKey, CurveSecretKey},
         net_address::ip::SocketAddress,
+        types::Direction,
         Context,
         CurveEncryption,
-        Direction,
         NetAddress,
         NetAddresses,
         PeerConnection,
@@ -84,7 +84,7 @@ pub struct LivePeerConnections {
     context: Context,
     repository: RwLock<ConnectionRepository>,
     pub(crate) config: PeerConnectionConfig,
-    connection_thread_handles: RwLock<HashMap<NodeId, JoinHandle<connection::Result<()>>>>,
+    connection_thread_handles: RwLock<HashMap<NodeId, JoinHandle<connection::types::Result<()>>>>,
 }
 
 impl LivePeerConnections {

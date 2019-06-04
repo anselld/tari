@@ -26,11 +26,10 @@ use super::{ConnectionId, PeerConnectionError};
 
 use crate::connection::{
     net_address::ip::SocketAddress,
+    types::{Direction, Result},
     zmq::{Context, CurveEncryption, InprocAddress},
     ConnectionError,
-    Direction,
     NetAddress,
-    Result,
 };
 
 /// The default maximum message size which will be used if no maximum message size is set.
@@ -221,11 +220,10 @@ mod test {
     use super::*;
     use crate::connection::{
         peer_connection::PeerConnectionError,
+        types::{Direction, Result},
         zmq::{Context, CurveEncryption, InprocAddress},
         ConnectionError,
-        Direction,
         NetAddress,
-        Result,
     };
 
     fn assert_initialization_error<T>(result: Result<T>, expected: &str) {

@@ -23,7 +23,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    connection::{Direction, NetAddress, PeerConnection},
+    connection::{types::Direction, NetAddress, PeerConnection},
     peer_manager::node_id::NodeId,
 };
 

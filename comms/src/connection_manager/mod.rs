@@ -35,4 +35,4 @@ pub use self::{
     manager::ConnectionManager,
 };
 
-pub type Result<T> = std::result::Result<T, ConnectionManagerError>;
+pub(crate) type Result<T> = std::result::Result<T, ConnectionManagerError>;
