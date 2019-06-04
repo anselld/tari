@@ -28,8 +28,8 @@ pub struct ClosestRequest {
 }
 
 pub enum BroadcastStrategy {
-    Direct(NodeId), // Send to a particular peer matching the given node ID
-    Flood,          // Send to all known Communication Node peers
-    Closest(ClosestRequest),   // Send to all n nearest neighbour Communication Nodes
-    Random(u32),    // Send to a random set of peers of size n that are Communication Nodes
+    Direct(NodeId),          // Send to a particular peer matching the given node ID
+    Flood,                   // Send to all known Communication Node peers
+    Closest(ClosestRequest), // Send to all n nearest neighbour Communication Nodes
+    Random(u32),             // Send to a random set of peers of size n that are Communication Nodes
 }

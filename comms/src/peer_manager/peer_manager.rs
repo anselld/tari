@@ -23,11 +23,11 @@
 use crate::{
     connection::net_address::NetAddress,
     outbound_message_service::broadcast_strategy::BroadcastStrategy,
-    peer_manager::{node_id::NodeId, node_identity::NodeIdentity, peer::Peer, peer_storage::PeerStorage},
+    peer_manager::{node_id::NodeId, node_identity::PeerNodeIdentity, peer::Peer, peer_storage::PeerStorage},
 };
 use derive_error::Error;
 use std::{hash::Hash, sync::RwLock, time::Duration};
-use tari_crypto::keys::{PublicKey, SecretKey};
+use tari_crypto::keys::PublicKey;
 use tari_storage::keyvalue_store::{DataStore, DatastoreError};
 use tari_utilities::message_format::MessageFormatError;
 
@@ -122,10 +122,10 @@ where
             .find_with_net_address(net_address)
     }
 
-    pub fn get_broadcast_identities<SecKey: SecretKey>(
+    pub fn get_broadcast_identities(
         &self,
         broadcast_strategy: BroadcastStrategy,
-    ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
+    ) -> Result<Vec<PeerNodeIdentity<PubKey>>, PeerManagerError>
     {
         match broadcast_strategy {
             BroadcastStrategy::Direct(node_id) => {
@@ -133,28 +133,28 @@ where
                 self.peer_storage
                     .read()
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
-                    .direct_identity::<SecKey>(&node_id)
+                    .direct_identity(&node_id)
             },
             BroadcastStrategy::Flood => {
                 // Send to all known Communication Node peers
                 self.peer_storage
                     .read()
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
-                    .flood_identities::<SecKey>()
+                    .flood_identities()
             },
             BroadcastStrategy::Closest(closest_request) => {
                 // Send to all n nearest neighbour Communication Nodes
                 self.peer_storage
                     .read()
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
-                    .closest_identities::<SecKey>(closest_request.node_id,closest_request.n)
+                    .closest_identities(closest_request.node_id, closest_request.n)
             },
             BroadcastStrategy::Random(n) => {
                 // Send to a random set of peers of size n that are Communication Nodes
                 self.peer_storage
                     .read()
                     .map_err(|_| PeerManagerError::PoisonedAccess)?
-                    .random_identities::<SecKey>(n)
+                    .random_identities(n)
             },
         }
     }
@@ -187,7 +187,7 @@ where
     /// Thread safe access to peer - The average connection latency of the provided net address will be updated to
     /// include the current measured latency sample
     pub fn update_latency(
-        &mut self,
+        &self,
         net_address: &NetAddress,
         latency_measurement: Duration,
     ) -> Result<(), PeerManagerError>

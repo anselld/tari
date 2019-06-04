@@ -22,13 +22,17 @@
 
 use crate::{
     connection::net_address::NetAddress,
-    peer_manager::{node_id::NodeId, node_identity::NodeIdentity, peer::Peer, peer_manager::PeerManagerError},
+    peer_manager::{
+        node_id::{NodeDistance, NodeId},
+        node_identity::PeerNodeIdentity,
+        peer::Peer,
+        peer_manager::PeerManagerError,
+    },
 };
 use std::{collections::HashMap, hash::Hash, ops::Index, time::Duration};
-use tari_crypto::keys::{PublicKey, SecretKey};
+use tari_crypto::keys::PublicKey;
 use tari_storage::keyvalue_store::DataStore;
 use tari_utilities::message_format::MessageFormat;
-use crate::peer_manager::node_id::NodeDistance;
 
 /// PeerStorage provides a mechanism to keep a datastore and a local copy of all peers in sync and allow fast searches
 /// using the node_id, public key or net_address of a peer.
@@ -142,11 +146,7 @@ where
     }
 
     /// Constructs a single NodeIdentity for the peer corresponding to the provided NodeId
-    pub fn direct_identity<SecKey: SecretKey>(
-        &self,
-        node_id: &NodeId,
-    ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
-    {
+    pub fn direct_identity(&self, node_id: &NodeId) -> Result<Vec<PeerNodeIdentity<PubKey>>, PeerManagerError> {
         let peer_index = *self
             .node_id_hm
             .get(&node_id)
@@ -154,38 +154,33 @@ where
         if self.peers[peer_index].is_banned() {
             Err(PeerManagerError::BannedPeer)
         } else {
-            Ok(vec![NodeIdentity::<PubKey, SecKey>::new(
+            Ok(vec![PeerNodeIdentity::<PubKey>::new(
                 node_id.clone(),
                 self.peers[peer_index].public_key.clone(),
-                None,
             )])
         }
     }
 
     /// Compile a list of all known node identities that can be used for the flood BroadcastStrategy
-    pub fn flood_identities<SecKey: SecretKey>(&self) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError> {
+    pub fn flood_identities(&self) -> Result<Vec<PeerNodeIdentity<PubKey>>, PeerManagerError> {
         // TODO: this list should only contain Communication Nodes
-        let mut identities: Vec<NodeIdentity<PubKey, SecKey>> = Vec::new();
+        let mut identities: Vec<PeerNodeIdentity<PubKey>> = Vec::new();
         for peer in &self.peers {
             if !peer.is_banned() {
-                identities.push(NodeIdentity::<PubKey, SecKey>::new(
-                    peer.node_id.clone(),
-                    peer.public_key.clone(),
-                    None,
-                ));
+                identities.push(PeerNodeIdentity::new(peer.node_id.clone(), peer.public_key.clone()));
             }
         }
         Ok(identities)
     }
 
     /// Compile a list of node identities that can be used for the closest BroadcastStrategy
-    pub fn closest_identities<SecKey: SecretKey>(
+    pub fn closest_identities(
         &self,
         node_id: NodeId,
         n: usize,
-    ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
+    ) -> Result<Vec<PeerNodeIdentity<PubKey>>, PeerManagerError>
     {
-        let peer_count=self.peers.len();
+        let peer_count = self.peers.len();
         if n > peer_count {
             return Err(PeerManagerError::InsufficientPeers);
         }
@@ -196,30 +191,25 @@ where
             dists.push(node_id.distance(&self.peers[i].node_id));
         }
         // Perform partial sort of elements only up to N elements
-        let mut nearest_identities: Vec<NodeIdentity<PubKey, SecKey>> = Vec::with_capacity(n);
+        let mut nearest_identities: Vec<PeerNodeIdentity<PubKey>> = Vec::with_capacity(n);
         for i in 0..n {
-            for j in i + 1..peer_count{
+            for j in i + 1..peer_count {
                 if dists[i] > dists[j] {
                     dists.swap(i, j);
                     indices.swap(i, j);
                 }
             }
-            nearest_identities.push(NodeIdentity::<PubKey, SecKey>::new(
+            nearest_identities.push(PeerNodeIdentity::<PubKey>::new(
                 self.peers[indices[i]].node_id.clone(),
                 self.peers[indices[i]].public_key.clone(),
-                None,
             ));
         }
         Ok(nearest_identities)
     }
 
     /// Compile a list of node identities that can be used for the random BroadcastStrategy
-    pub fn random_identities<SecKey: SecretKey>(
-        &self,
-        _n: u32,
-    ) -> Result<Vec<NodeIdentity<PubKey, SecKey>>, PeerManagerError>
-    {
-        let identities: Vec<NodeIdentity<PubKey, SecKey>> = Vec::new();
+    pub fn random_identities(&self, _n: u32) -> Result<Vec<PeerNodeIdentity<PubKey>>, PeerManagerError> {
+        let identities: Vec<PeerNodeIdentity<PubKey>> = Vec::new();
 
         // TODO: Send to all n nearest neighbour Communication Nodes
 
