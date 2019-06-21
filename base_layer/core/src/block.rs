@@ -258,7 +258,7 @@ impl BlockBuilder {
 
     /// This function will create a coinbase from the provided secret key. The coinbase will be added to the outputs and
     /// kernels
-    pub fn create_coinbase<SKey>(mut self, key: PrivateKey) -> Self {
+    pub fn create_coinbase(mut self, key: PrivateKey) -> Self {
         let mut rng = rand::OsRng::new().unwrap();
         // build output
         let amount = calculate_coinbase(self.header.height) + self.total_fee;
@@ -272,15 +272,19 @@ impl BlockBuilder {
         );
 
         // create kernel
-        let tx_meta = TransactionMetadata { fee: 0, lock_height: 0 };
+        let tx_meta = TransactionMetadata {
+            fee: 0,
+            lock_height: self.header.height + COINBASE_LOCK_HEIGHT,
+        };
         let r = PrivateKey::random(&mut rng);
         let e = build_challenge(&PublicKey::from_secret_key(&r), &tx_meta);
         let s = Signature::sign(key.clone(), r, &e).unwrap();
+        let excess = COMMITMENT_FACTORY.commit_value(&key, 0);
         let kernel = KernelBuilder::new()
             .with_features(KernelFeatures::COINBASE_KERNEL)
             .with_fee(0)
             .with_lock_height(COINBASE_LOCK_HEIGHT)
-            .with_excess(&COMMITMENT_FACTORY.zero())
+            .with_excess(&excess)
             .with_signature(&s)
             .build()
             .unwrap();
