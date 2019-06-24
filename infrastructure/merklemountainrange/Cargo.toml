@@ -21,3 +21,6 @@ rmp-serde = "0.13.7"
 [dev-dependencies]
 blake2 = "0.8.0"
 tari_infra_derive= {path = "../derive"}
+log = "0.4.6"
+simple_logger = "1.2.0"
+rand = "0.6.5"
