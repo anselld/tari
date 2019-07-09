@@ -72,7 +72,7 @@ about our system being
 [Byzantine Fault Tolerant](https://tlu.tarilabs.com/consensus-mechanisms/BFT-consensusmechanisms/sources/PITCHME.link.html).
 
 Tari Asset [committees] are chosen by the asset issuer according to [RFC-0304](RFC-0304_VNCommittees.md). The committees
-form a fixed set of replicas, at the very least least from checkpoint to checkpoint, and will typically be limited in
+form a fixed set of replicas, at the very least from checkpoint to checkpoint, and will typically be limited in
 size (usually less than ten, and almost always under 100). Because nodes cannot join and leave the committees at will,
 robust yet slow and expensive consensus approaches such as Nakamoto consensus can be dropped in favour of something more
 performant.
