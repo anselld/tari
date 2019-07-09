@@ -140,7 +140,7 @@ Once a super-majority of these messages have been received, the leader composes 
 a new node to the state history graph (I'm calling it a state history graph to avoid naming confusion, but it's really a
 blockchain). It composes a message containing the new proposal, and broadcasts it to the other replicas.
 
-Replicas, on receipt on the proposal, decide whether the proposal is valid, both from a protocol point of view (i.e. did
+Replicas, on receipt of the proposal, decide whether the proposal is valid, both from a protocol point of view (i.e. did
 the leader provide a well-formed proposal) as well as whether they agree on the new state (e.g. by executing the
 instructions as given and comparing the resulting state with that of the proposal). If there is agreement, they vote on
 the proposal by signing it, and send their partial signature back to the leader.
