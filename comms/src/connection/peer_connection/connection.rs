@@ -265,22 +265,25 @@ pub struct PeerConnection {
 }
 
 impl PeerConnection {
-    /// Returns true if the PeerConnection is in a connected state, otherwise false
+    /// Returns true if the PeerConnection is in an `Initial` state, otherwise false
+    is_state!(is_initial, Initial);
+
+    /// Returns true if the PeerConnection is in a `Connected` state, otherwise false
     is_state!(is_connected, Connected(_));
 
-    /// Returns true if the PeerConnection is in a shutdown state, otherwise false
+    /// Returns true if the PeerConnection is in a `Shutdown` state, otherwise false
     is_state!(is_shutdown, Shutdown);
 
-    /// Returns true if the PeerConnection is in a listening state, otherwise false
+    /// Returns true if the PeerConnection is in a `Listening` state, otherwise false
     is_state!(is_listening, Listening(_));
 
     /// Returns true if the PeerConnection is in a `Disconnected`/`Shutdown`/`Failed` state, otherwise false
     is_state!(is_disconnected, Disconnected | Shutdown | Failed(_));
 
-    /// Returns true if the PeerConnection is in a failed state, otherwise false
+    /// Returns true if the PeerConnection is in a `Failed` state, otherwise false
     is_state!(is_failed, Failed(_));
 
-    /// Returns true if the PeerConnection is in a connecting, listening or connected state, otherwise false
+    /// Returns true if the PeerConnection is in a `Connecting`, `Listening` or `Connected` state, otherwise false
     is_state!(is_active, Connecting(_) | Connected(_) | Listening(_));
 
     /// Create a new PeerConnection
@@ -307,9 +310,14 @@ impl PeerConnection {
 
     /// Tell the underlying thread to shut down. The connection will not immediately
     /// be in a `Shutdown` state. [wait_shutdown] can be used to wait for the
-    /// connection to shut down.
+    /// connection to shut down. If the connection is not active, this method does nothing.
     pub fn shutdown(&self) -> Result<()> {
-        self.send_control_message(ControlMessage::Shutdown)
+        match self.send_control_message(ControlMessage::Shutdown) {
+            // StateError only returns from send_control_message
+            // if the connection worker is not active
+            Ok(_) | Err(ConnectionError::PeerError(PeerConnectionError::StateError(_))) => Ok(()),
+            e => e,
+        }
     }
 
     /// Send frames to the connected Peer. An Err will be returned if the
@@ -487,6 +495,19 @@ impl PeerConnection {
         } else {
             Err(ConnectionError::Timeout)
         }
+    }
+
+    #[cfg(test)]
+    pub fn active_state_for_test() -> (Self, std::sync::mpsc::Receiver<ControlMessage>) {
+        use std::sync::mpsc::sync_channel;
+        let (tx, rx) = sync_channel(1);
+        (
+            Self {
+                state: Arc::new(RwLock::new(PeerConnectionState::Connecting(Arc::new(tx.into())))),
+                ..Default::default()
+            },
+            rx,
+        )
     }
 }
 

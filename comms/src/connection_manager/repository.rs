@@ -20,11 +20,12 @@
 //  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::collections::HashMap;
-
 use crate::{connection::PeerConnection, peer_manager::node_id::NodeId};
-
-use std::sync::{Arc, RwLock};
+use chrono::Utc;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 lazy_static! {
     static ref PORT_ALLOCATIONS: RwLock<Vec<u16>> = RwLock::new(vec![]);
@@ -66,6 +67,11 @@ impl Repository<NodeId, PeerConnection> for ConnectionRepository {
 }
 
 impl ConnectionRepository {
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
     pub fn count_where<P>(&self, predicate: P) -> usize
     where P: FnMut(&&Arc<PeerConnection>) -> bool {
         self.entries.values().filter(predicate).count()
@@ -75,6 +81,40 @@ impl ConnectionRepository {
         for entry in self.entries.values() {
             f(entry);
         }
+    }
+
+    pub fn drain_filter<F>(&mut self, predicate: F) -> Vec<(NodeId, Arc<PeerConnection>)>
+    where F: FnMut(&(&NodeId, &Arc<PeerConnection>)) -> bool {
+        let to_remove = self
+            .entries
+            .iter()
+            .filter(predicate)
+            .map(|(node_id, _)| node_id.clone())
+            .collect::<Vec<_>>();
+
+        to_remove
+            .into_iter()
+            .map(|node_id| {
+                let conn = self
+                    .entries
+                    .remove(&node_id)
+                    .expect("Invariant check: entry to remove was not found in `drain_if`");
+
+                (node_id, conn)
+            })
+            .collect::<Vec<_>>()
+    }
+
+    pub fn sorted_recent_activity(&self) -> Vec<(&NodeId, &Arc<PeerConnection>)> {
+        let now = Utc::now().naive_utc();
+
+        let mut items = self.entries.iter().collect::<Vec<_>>();
+        items.sort_by(|(_, a), (_, b)| {
+            let a_duration = now.signed_duration_since(a.last_activity());
+            let b_duration = now.signed_duration_since(b.last_activity());
+            a_duration.cmp(&b_duration)
+        });
+        items
     }
 }
 

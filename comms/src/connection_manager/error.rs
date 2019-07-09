@@ -26,7 +26,12 @@ use crate::{
     peer_manager::PeerManagerError,
 };
 use derive_error::Error;
-use tari_utilities::{ciphers::cipher::CipherError, message_format::MessageFormatError, ByteArrayError};
+use tari_utilities::{
+    ciphers::cipher::CipherError,
+    message_format::MessageFormatError,
+    thread_join::ThreadError,
+    ByteArrayError,
+};
 
 #[derive(Error, Debug)]
 pub enum ConnectionManagerError {
@@ -56,4 +61,10 @@ pub enum ConnectionManagerError {
     DatastoreError,
     /// Connection timed out before it was able to connect
     TimeoutBeforeConnected,
+    /// The maximum number of peer connections has been reached
+    MaxConnectionsReached,
+    /// Failed to shutdown a peer connection
+    #[error(no_from)]
+    ConnectionShutdownFailed(ConnectionError),
+    PeerConnectionThreadError(ThreadError),
 }

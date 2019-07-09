@@ -36,7 +36,9 @@ use log::*;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
+use tari_utilities::thread_join::thread_join::ThreadJoinWithTimeout;
 
 const LOG_TARGET: &'static str = "comms::connection_manager::manager";
 
@@ -59,7 +61,7 @@ impl ConnectionManager {
     {
         Self {
             node_identity,
-            connections: LivePeerConnections::new(),
+            connections: LivePeerConnections::with_max_connections(config.max_connections),
             establisher: Arc::new(ConnectionEstablisher::new(zmq_context, config, peer_manager.clone())),
             peer_manager,
             establish_locks: Mutex::new(HashMap::new()),
@@ -96,6 +98,11 @@ impl ConnectionManager {
         dest_public_key: CurvePublicKey,
     ) -> Result<Arc<PeerConnection>>
     {
+        // If we have reached the maximum connections, we won't allow new connections to be requested
+        if self.connections.has_reached_max_active_connections() {
+            return Err(ConnectionManagerError::MaxConnectionsReached);
+        }
+
         let (conn, join_handle) = self.establisher.establish_outbound_peer_connection(
             peer.node_id.clone().into(),
             address,
@@ -103,7 +110,7 @@ impl ConnectionManager {
         )?;
 
         self.connections
-            .add_connection(peer.node_id.clone(), conn.clone(), join_handle);
+            .add_connection(peer.node_id.clone(), conn.clone(), join_handle)?;
         Ok(conn)
     }
 
@@ -213,8 +220,21 @@ impl ConnectionManager {
         self.peer_manager.clone()
     }
 
-    pub(crate) fn get_connection(&self, peer: &Peer) -> Option<Arc<PeerConnection>> {
-        self.connections.get_connection(&peer.node_id).map(|c| c.clone())
+    /// Shutdown a given peer's [PeerConnection] and return it if one exists,
+    /// otherwise None is returned.
+    ///
+    /// [PeerConnection]: ../../connection/peer_connection/index.html
+    pub(crate) fn shutdown_connection_for_peer(&self, peer: &Peer) -> Result<Option<Arc<PeerConnection>>> {
+        match self.connections.drop_connection(&peer.node_id) {
+            Ok((conn, handle)) => {
+                handle
+                    .timeout_join(Duration::from_millis(3000))
+                    .map_err(ConnectionManagerError::PeerConnectionThreadError)?;
+                Ok(Some(conn))
+            },
+            Err(ConnectionManagerError::PeerConnectionNotFound) => Ok(None),
+            Err(err) => Err(err),
+        }
     }
 
     /// Return the number of _active_ peer connections currently managed by this instance
@@ -251,10 +271,8 @@ impl ConnectionManager {
                         Err(ConnectionManagerError::ConnectionError(err))
                     })?;
 
-                // TODO(sdbondi): Check if num active connections > max_connections, if so remove
-                //                the peer connection which has not seen much recent activity.
                 self.connections
-                    .add_connection(peer.node_id.clone(), Arc::clone(&new_inbound_conn), join_handle);
+                    .add_connection(peer.node_id.clone(), Arc::clone(&new_inbound_conn), join_handle)?;
 
                 Ok(new_inbound_conn)
             })
@@ -275,8 +293,14 @@ impl ConnectionManager {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::connection::{InprocAddress, ZmqContext};
-    use std::{path::PathBuf, time::Duration};
+    use crate::{
+        connection::{InprocAddress, ZmqContext},
+        peer_manager::PeerFlags,
+        types::CommsPublicKey,
+    };
+    use rand::rngs::OsRng;
+    use std::{path::PathBuf, thread, time::Duration};
+    use tari_crypto::keys::PublicKey;
     use tari_storage::lmdb_store::{LMDBBuilder, LMDBStore};
 
     fn get_path(name: &str) -> String {
@@ -302,15 +326,27 @@ mod test {
         std::fs::remove_dir_all(get_path(name)).unwrap();
     }
 
-    #[test]
-    fn get_active_connection_count() {
+    fn setup(database_name: &str) -> (ZmqContext, Arc<NodeIdentity>, Arc<PeerManager>) {
         let context = ZmqContext::new();
         let node_identity = Arc::new(NodeIdentity::random_for_test(None));
 
-        let database_name = "cm_get_active_connection_count"; // Note: every test should have unique database
         let datastore = init_datastore(database_name).unwrap();
         let peer_database = datastore.get_handle(database_name).unwrap();
         let peer_manager = Arc::new(PeerManager::new(peer_database).unwrap());
+
+        (context, node_identity, peer_manager)
+    }
+
+    fn create_peer(address: NetAddress) -> Peer {
+        let (_, pk) = CommsPublicKey::random_keypair(&mut OsRng::new().unwrap());
+        let node_id = NodeId::from_key(&pk).unwrap();
+        Peer::new(pk, node_id, address.into(), PeerFlags::empty())
+    }
+
+    #[test]
+    fn get_active_connection_count() {
+        let database_name = "connection_manager_get_active_connection_count";
+        let (context, node_identity, peer_manager) = setup(database_name);
         let manager = ConnectionManager::new(context, node_identity, peer_manager, PeerConnectionConfig {
             peer_connection_establish_timeout: Duration::from_secs(5),
             max_message_size: 1024,
@@ -320,7 +356,47 @@ mod test {
             message_sink_address: InprocAddress::random(),
             socks_proxy_address: None,
         });
+
         assert_eq!(manager.get_active_connection_count(), 0);
+
+        clean_up_datastore(database_name);
+    }
+
+    #[test]
+    fn shutdown_connection_for_peer() {
+        let database_name = "connection_manager_shutdown_connection_for_peer";
+        let (context, node_identity, peer_manager) = setup(database_name);
+        let manager = ConnectionManager::new(context, node_identity, peer_manager, PeerConnectionConfig {
+            peer_connection_establish_timeout: Duration::from_secs(5),
+            max_message_size: 1024,
+            host: "127.0.0.1".parse().unwrap(),
+            max_connect_retries: 3,
+            max_connections: 10,
+            message_sink_address: InprocAddress::random(),
+            socks_proxy_address: None,
+        });
+
+        assert_eq!(manager.get_active_connection_count(), 0);
+
+        let address = "127.0.0.1:43456".parse::<NetAddress>().unwrap();
+        let peer = create_peer(address.clone());
+
+        assert!(manager.shutdown_connection_for_peer(&peer).unwrap().is_none());
+
+        let (peer_conn, rx) = PeerConnection::active_state_for_test();
+        let peer_conn = Arc::new(peer_conn);
+        let join_handle = thread::spawn(|| Ok(()));
+        manager
+            .connections
+            .add_connection(peer.node_id.clone(), peer_conn, join_handle)
+            .unwrap();
+
+        match manager.shutdown_connection_for_peer(&peer).unwrap() {
+            Some(_) => {},
+            None => panic!("shutdown_connection_for_peer did not return active peer connection"),
+        }
+
+        drop(rx);
 
         clean_up_datastore(database_name);
     }

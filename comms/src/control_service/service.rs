@@ -69,7 +69,7 @@ where
             listener_address,
             socks_proxy_address: None,
             accept_message_type: T::default(),
-            requested_outbound_connection_timeout: Duration::from_secs(2),
+            requested_outbound_connection_timeout: Duration::from_secs(10),
         }
     }
 }

@@ -194,6 +194,7 @@ impl MessagePoolWorker {
         self.peer_manager
             .reset_connection_attempts(&peer.node_id)
             .map_err(OutboundMessagePoolError::PeerManagerError)?;
+
         let peer_connection = self
             .connection_manager
             .establish_connection_to_peer(&peer)

@@ -143,14 +143,15 @@ where
         "Connecting to requested address {}", message.address
     );
 
-    if let Some(conn) = conn_manager.get_connection(&peer) {
-        if conn.is_active() {
-            debug!(
-                target: LOG_TARGET,
-                "Already have active connection to peer. Shutting down the old connection."
-            );
-            conn.shutdown().map_err(ControlServiceError::ConnectionError)?;
-        }
+    if conn_manager
+        .shutdown_connection_for_peer(&peer)
+        .map_err(ControlServiceError::ConnectionManagerError)?
+        .is_some()
+    {
+        debug!(
+            target: LOG_TARGET,
+            "Shutdown existing active connection for NodeId {}", peer.node_id
+        );
     }
 
     let conn = conn_manager

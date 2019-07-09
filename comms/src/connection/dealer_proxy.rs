@@ -173,6 +173,8 @@ impl DealerProxy {
                     );
                     Err(err)
                 })?;
+
+            drop(control);
         }
 
         Ok(())
