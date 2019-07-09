@@ -81,7 +81,7 @@ There is a good survey of consensus mechanisms on
 [Tari Labs University](https://tlu.tarilabs.com/consensus-mechanisms/consensus-mechanisms.html).
 
 From the point of view of a DAN committee, the ideal consensus algorithm is one that
-1. allows a high number of transactions per second, and does does have unnecessary pauses (i.e. a partially synchronous
+1. allows a high number of transactions per second, and doesn't have unnecessary pauses (i.e. a partially synchronous
    or asynchronous model).
 2. Is Byzantine Fault tolerant.
 3. Is relatively efficient from a network communication point of view (number of messages passed per state agreement).
