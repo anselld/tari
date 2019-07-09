@@ -96,7 +96,7 @@ on [HotStuff] BFT provide the best trade-offs for the goals that a DAN committee
    next one. There is no need to wait for the "timeout" period as we do in e.g. Tendermint. This allows instructions to
    be executed alomst as quickly as they are received.
 2. The algorithm is efficient in communication, requiring O(n) messages per state agreement in most practical cases.
-   This is compared to e.g. PBFT which requires O(n<sup>4</sup>) messages.
+   This is compared to e.g. Practical Byzantine Fault Tolerance (PBFT) which requires O(n<sup>4</sup>) messages.
 3. The algorithm is modular and relatively simple to implement.
 
 Potential drawbacks to using HotStuff include:
