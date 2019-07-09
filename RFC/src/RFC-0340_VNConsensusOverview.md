@@ -143,7 +143,7 @@ blockchain). It composes a message containing the new proposal, and broadcasts i
 Replicas, on receipt of the proposal, decide whether the proposal is valid, both from a protocol point of view (i.e. did
 the leader provide a well-formed proposal) as well as whether they agree on the new state (e.g. by executing the
 instructions as given and comparing the resulting state with that of the proposal). If there is agreement, they vote on
-the proposal by signing it, and send their partial signature back to the leader.
+the proposal by signing it, and sending their partial signature back to the leader.
 
 When the leader has received a super-majority of votes, it sends a message back to the replicas with the (aggregated)
 set of signatures.
