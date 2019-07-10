@@ -23,7 +23,7 @@
 use super::{establisher::ConnectionEstablisher, types::PeerConnectionJoinHandle, ConnectionManagerError, Result};
 use crate::{
     connection::{connection::EstablishedConnection, CurveEncryption, CurvePublicKey, PeerConnection},
-    control_service::ControlServiceMessageType,
+    control_service::{consts::MSG_MESSAGE, ControlServiceMessageType},
     message::{p2p::EstablishConnection, Message, MessageEnvelope, MessageFlags, MessageHeader, NodeDestination},
     peer_manager::{NodeIdentity, Peer},
 };
@@ -49,7 +49,7 @@ impl<'e, 'ni> PeerConnectionProtocol<'e, 'ni> {
     /// Send Establish connection message to the peers control port to request a connection
     pub fn negotiate_peer_connection(&self, peer: &Peer) -> Result<(Arc<PeerConnection>, PeerConnectionJoinHandle)> {
         info!(target: LOG_TARGET, "[NodeId={}] Negotiating connection", peer.node_id);
-        let (control_port_conn, monitor) = self.establisher.establish_control_service_connection(&peer)?;
+        let control_port_conn = self.establisher.establish_control_service_connection(&peer)?;
         info!(
             target: LOG_TARGET,
             "[NodeId={}] Established peer control port connection at address {:?}",
@@ -98,7 +98,6 @@ impl<'e, 'ni> PeerConnectionProtocol<'e, 'ni> {
         );
 
         drop(control_port_conn);
-        drop(monitor);
 
         Ok((new_inbound_conn, join_handle))
     }
@@ -125,8 +124,11 @@ impl<'e, 'ni> PeerConnectionProtocol<'e, 'ni> {
         )
         .map_err(ConnectionManagerError::MessageError)?;
 
+        let mut frames = vec![MSG_MESSAGE.to_vec()];
+        frames.extend(envelope.into_frame_set());
+
         control_conn
-            .send_sync(envelope.into_frame_set())
+            .send_sync(frames)
             .map_err(ConnectionManagerError::ConnectionError)?;
 
         Ok(())

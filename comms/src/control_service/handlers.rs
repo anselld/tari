@@ -129,7 +129,8 @@ where
                 target: LOG_TARGET,
                 "Already have active connection to peer. Shutting down the old connection."
             );
-            conn.shutdown().map_err(ControlServiceError::ConnectionError)?;
+            return Ok(());
+            //            conn.shutdown().map_err(ControlServiceError::ConnectionError)?;
         }
     }
 

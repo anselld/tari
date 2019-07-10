@@ -423,6 +423,13 @@ impl PeerConnectionWorker {
                 Some(ref ident) => {
                     let mut payload = vec![ident.clone()];
                     payload.extend(frames);
+
+                    debug!(
+                        target: LOG_TARGET,
+                        "Created payload with identity frame {:x?} ({} frame(s))",
+                        ident,
+                        payload.len()
+                    );
                     Ok(payload)
                 },
                 None => return Err(PeerConnectionError::IdentityNotEstablished.into()),
@@ -447,8 +454,8 @@ impl PeerConnectionWorker {
         let context = &self.context;
         Connection::new(&context.context, context.direction.clone())
             .set_linger(context.linger.clone())
-            .set_heartbeat_interval(Duration::from_millis(1000))
-            .set_heartbeat_timeout(Duration::from_millis(5000))
+            .set_heartbeat_interval(Duration::from_millis(10))
+            .set_heartbeat_timeout(Duration::from_millis(50))
             .set_monitor_addr(self.monitor_addr.clone())
             .set_curve_encryption(context.curve_encryption.clone())
             .set_receive_hwm(PEER_CONNECTION_RECV_HWM)

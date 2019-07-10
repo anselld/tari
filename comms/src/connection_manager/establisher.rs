@@ -37,6 +37,7 @@ use crate::{
         PeerConnectionContextBuilder,
         ZmqContext,
     },
+    control_service::consts::{MSG_ACCEPT, MSG_CONNECT},
     peer_manager::{Peer, PeerManager},
 };
 use log::*;
@@ -115,7 +116,8 @@ impl ConnectionEstablisher {
     pub fn establish_control_service_connection(
         &self,
         peer: &Peer,
-    ) -> Result<(EstablishedConnection, ConnectionMonitor)>
+        //    ) -> Result<(EstablishedConnection, ConnectionMonitor)>
+    ) -> Result<EstablishedConnection>
     {
         let config = &self.config;
 
@@ -126,7 +128,7 @@ impl ConnectionEstablisher {
         let mut attempt = ConnectionAttempts::new(
             &self.context,
             self.peer_manager.clone(),
-            |monitor_addr, _| {
+            || {
                 let address = self
                     .peer_manager
                     .get_best_net_address(&peer.node_id)
@@ -135,11 +137,10 @@ impl ConnectionEstablisher {
                 let conn = Connection::new(&self.context, Direction::Outbound)
                     .set_name(format!("out-control-port-conn-{}", peer.node_id).as_str())
                     .set_linger(Linger::Never)
-                    .set_backlog(0)
-                    .set_monitor_addr(monitor_addr)
+                    .set_backlog(1)
                     .set_socks_proxy_addr(config.socks_proxy_address.clone())
                     .set_max_message_size(Some(config.max_message_size))
-                    .set_receive_hwm(0)
+                    .set_receive_hwm(1)
                     .set_send_hwm(1)
                     .establish(&address)
                     .map_err(ConnectionManagerError::ConnectionError)?;
@@ -157,10 +158,10 @@ impl ConnectionEstablisher {
         );
         attempt
             .try_connect(peer.addresses.len())
-            .and_then(|(conn, monitor)| {
+            .and_then(|conn| {
                 conn.set_linger(Linger::Timeout(3000))
                     .map_err(ConnectionManagerError::ConnectionError)?;
-                Ok((conn, monitor))
+                Ok(conn)
             })
             .or_else(|err| {
                 self.peer_manager
@@ -295,7 +296,7 @@ struct ConnectionAttempts<'c, F> {
 }
 
 impl<'c, F> ConnectionAttempts<'c, F>
-where F: Fn(InprocAddress, usize) -> Result<(EstablishedConnection, NetAddress)>
+where F: Fn() -> Result<(EstablishedConnection, NetAddress)>
 {
     pub fn new(
         context: &'c ZmqContext,
@@ -312,15 +313,11 @@ where F: Fn(InprocAddress, usize) -> Result<(EstablishedConnection, NetAddress)>
         }
     }
 
-    pub fn try_connect(&mut self, num_attempts: usize) -> Result<(EstablishedConnection, ConnectionMonitor)> {
+    pub fn try_connect(&mut self, num_attempts: usize) -> Result<EstablishedConnection> {
         let mut attempt_count = 0;
-        let monitor_addr = InprocAddress::random();
         loop {
-            let monitor = ConnectionMonitor::connect(self.context, &monitor_addr)
-                .map_err(ConnectionManagerError::ConnectionError)?;
-
             attempt_count += 1;
-            let (conn, address) = (self.attempt_fn)(monitor_addr.clone(), attempt_count)?;
+            let (conn, address) = (self.attempt_fn)()?;
 
             debug!(
                 target: LOG_TARGET,
@@ -331,7 +328,7 @@ where F: Fn(InprocAddress, usize) -> Result<(EstablishedConnection, NetAddress)>
                 self.attempt_timeout.as_secs()
             );
 
-            if self.can_connect(&monitor)? {
+            if self.attempt_connect(&conn)? {
                 debug!(
                     target: LOG_TARGET,
                     "Successful connection on control port: {:?}",
@@ -340,13 +337,12 @@ where F: Fn(InprocAddress, usize) -> Result<(EstablishedConnection, NetAddress)>
                 self.peer_manager
                     .mark_successful_connection_attempt(&address)
                     .map_err(ConnectionManagerError::PeerManagerError)?;
-                break Ok((conn, monitor));
+                break Ok(conn);
             } else {
                 debug!(
                     target: LOG_TARGET,
                     "Unable to connect on address {} (attempt: {} of {})", address, attempt_count, num_attempts
                 );
-                drop(monitor);
                 drop(conn);
                 self.peer_manager
                     .mark_failed_connection_attempt(&address)
@@ -358,30 +354,12 @@ where F: Fn(InprocAddress, usize) -> Result<(EstablishedConnection, NetAddress)>
         }
     }
 
-    fn can_connect(&self, monitor: &ConnectionMonitor) -> Result<bool> {
-        let mut num_polls = 0;
-        loop {
-            if let Some(event) = connection_try!(monitor.read(100)) {
-                use SocketEventType::*;
-                debug!(target: LOG_TARGET, "Attempt Socket Event: {:?}", event);
-                match event.event_type {
-                    Connected | Accepted | Listening => break Ok(true),
-                    AcceptFailed |
-                    Disconnected |
-                    Closed |
-                    CloseFailed |
-                    BindFailed |
-                    HandshakeFailedAuth |
-                    HandshakeFailedNoDetail |
-                    HandshakeFailedProtocol |
-                    MonitorStopped => break Ok(false),
-                    _ => {},
-                }
-            }
-            num_polls += 1;
-            if num_polls * 100 >= self.attempt_timeout.as_millis() {
-                break Err(ConnectionManagerError::TimeoutBeforeConnected);
-            }
+    fn attempt_connect(&self, connection: &EstablishedConnection) -> Result<bool> {
+        connection.send(&[MSG_CONNECT])?;
+        if let Some(reply) = connection_try!(connection.receive(self.attempt_timeout.as_millis() as u32)) {
+            Ok(reply[0] == MSG_ACCEPT)
+        } else {
+            Ok(false)
         }
     }
 }

@@ -20,43 +20,7 @@
 //  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::{
-    connection::{ConnectionError, PeerConnectionError},
-    connection_manager::ConnectionManagerError,
-    dispatcher::DispatchError,
-    message::MessageError,
-    peer_manager::{node_id::NodeIdError, PeerManagerError},
-};
-use derive_error::Error;
-use tari_utilities::{ciphers::cipher::CipherError, message_format::MessageFormatError};
-
-#[derive(Debug, Error)]
-pub enum ControlServiceError {
-    #[error(no_from)]
-    BindFailed(ConnectionError),
-    MessageError(MessageError),
-    DispatchError(DispatchError),
-    MessageFormatError(MessageFormatError),
-    /// Failed to send control message to worker
-    ControlMessageSendFailed,
-    /// Failed to join on worker thread
-    WorkerThreadJoinFailed,
-    NodeIdError(NodeIdError),
-    PeerManagerError(PeerManagerError),
-    PeerConnectionError(PeerConnectionError),
-    ConnectionError(ConnectionError),
-    /// Node identity has not been set
-    NodeIdentityNotSet,
-    ConnectionManagerError(ConnectionManagerError),
-    /// The worker thread failed to start
-    WorkerThreadFailedToStart,
-    /// Failed to serialize shared secret
-    SharedSecretSerializationError,
-    /// Received an unencrypted message. Discarding it.
-    ReceivedUnencryptedMessage,
-    CipherError(CipherError),
-    /// Peer is banned, refusing connection request
-    PeerBanned,
-    /// An invalid control message type was received
-    InvalidControlMessageType,
-}
+pub const MSG_CONNECT: &'static [u8] = &[1];
+pub const MSG_ACCEPT: &'static [u8] = &[2];
+pub const MSG_REJECT: &'static [u8] = &[3];
+pub const MSG_MESSAGE: &'static [u8] = &[4];

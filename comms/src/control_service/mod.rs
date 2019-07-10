@@ -68,6 +68,7 @@
 //!
 //! service.shutdown().unwrap();
 //! ```
+pub(crate) mod consts;
 mod error;
 pub mod handlers;
 mod service;
