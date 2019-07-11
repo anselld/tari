@@ -4,7 +4,7 @@ use crate::connection::{
 };
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{ops::Index, time::Duration};
 
 pub const MAX_CONNECTION_ATTEMPTS: u32 = 3;
 
@@ -141,6 +141,15 @@ impl NetAddressesWithStats {
     /// Returns the number of addresses
     pub fn len(&self) -> usize {
         self.addresses.len()
+    }
+}
+
+impl Index<usize> for NetAddressesWithStats {
+    type Output = NetAddressWithStats;
+
+    /// Returns the NetAddressWithStats at the given index
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.addresses[index]
     }
 }
 

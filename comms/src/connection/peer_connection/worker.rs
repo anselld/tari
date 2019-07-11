@@ -423,6 +423,13 @@ impl PeerConnectionWorker {
                 Some(ref ident) => {
                     let mut payload = vec![ident.clone()];
                     payload.extend(frames);
+
+                    debug!(
+                        target: LOG_TARGET,
+                        "Created payload with identity frame {:x?} ({} frame(s))",
+                        ident,
+                        payload.len()
+                    );
                     Ok(payload)
                 },
                 None => return Err(PeerConnectionError::IdentityNotEstablished.into()),

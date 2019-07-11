@@ -36,16 +36,14 @@ use tari_comms::{
         ZmqContext,
     },
     control_service::{
-        handlers::ControlServiceResolver,
+        messages::RequestConnection,
         ControlService,
         ControlServiceConfig,
         ControlServiceError,
-        ControlServiceMessageContext,
         ControlServiceMessageType,
     },
     dispatcher::{DispatchError, Dispatcher},
     message::{
-        p2p::EstablishConnection,
         Message,
         MessageEnvelope,
         MessageEnvelopeHeader,
@@ -181,24 +179,19 @@ fn recv_message() {
             .unwrap(),
     );
 
-    let dispatcher = Dispatcher::new(ControlServiceResolver::new())
-        .route(ControlServiceMessageType::EstablishConnection, test_handler);
-
     let service = ControlService::new(context.clone(), node_identity.clone(), ControlServiceConfig {
         socks_proxy_address: None,
         listener_address: control_service_address.clone(),
         accept_message_type: 123,
         requested_outbound_connection_timeout: Duration::from_millis(2000),
     })
-    .with_custom_dispatcher(dispatcher)
     .serve(connection_manager)
     .unwrap();
 
-    // A "remote" node sends an EstablishConnection message to this node's control port
+    // A "remote" node sends an RequestConnection message to this node's control port
     let requesting_node_address = factories::net_address::create().build().unwrap();
-    //    let (secret_key, public_key) = RistrettoPublicKey::random_keypair(&mut rand::OsRng::new().unwrap());
     let (_sk, server_pk) = CurveEncryption::generate_keypair().unwrap();
-    let msg = EstablishConnection {
+    let msg = RequestConnection {
         address: requesting_node_address,
         node_id: NodeId::from_key(&node_identity.identity.public_key).unwrap(),
         server_key: server_pk,

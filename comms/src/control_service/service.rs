@@ -28,7 +28,6 @@ use super::{
 use crate::{
     connection::{net_address::ip::SocketAddress, NetAddress, ZmqContext},
     connection_manager::ConnectionManager,
-    control_service::types::ControlServiceDispatcher,
     peer_manager::NodeIdentity,
     types::DEFAULT_LISTENER_ADDRESS,
 };
@@ -81,7 +80,6 @@ pub struct ControlService<MType>
 where MType: Clone
 {
     context: ZmqContext,
-    dispatcher: ControlServiceDispatcher<MType>,
     config: ControlServiceConfig<MType>,
     node_identity: Arc<NodeIdentity>,
 }
@@ -95,7 +93,6 @@ where
     pub fn with_default_config(context: ZmqContext, node_identity: Arc<NodeIdentity>) -> Self {
         Self {
             context,
-            dispatcher: Default::default(),
             config: Default::default(),
             node_identity,
         }
@@ -108,12 +105,9 @@ where
     MType: Serialize + DeserializeOwned,
     MType: Clone,
 {
-    setter!(with_custom_dispatcher, dispatcher, ControlServiceDispatcher<MType>);
-
     pub fn new(context: ZmqContext, node_identity: Arc<NodeIdentity>, config: ControlServiceConfig<MType>) -> Self {
         Self {
             context,
-            dispatcher: Default::default(),
             config,
             node_identity,
         }
@@ -124,7 +118,6 @@ where
         Ok(ControlServiceWorker::start(
             self.context.clone(),
             self.node_identity,
-            self.dispatcher,
             config,
             connection_manager,
         )?

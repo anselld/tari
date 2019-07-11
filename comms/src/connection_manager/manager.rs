@@ -58,9 +58,9 @@ impl ConnectionManager {
     ) -> Self
     {
         Self {
+            establisher: Arc::new(ConnectionEstablisher::new(zmq_context, Arc::clone(&node_identity), config, peer_manager.clone())),
             node_identity,
             connections: LivePeerConnections::new(),
-            establisher: Arc::new(ConnectionEstablisher::new(zmq_context, config, peer_manager.clone())),
             peer_manager,
             establish_locks: Mutex::new(HashMap::new()),
         }
@@ -112,7 +112,7 @@ impl ConnectionManager {
     }
 
     /// Lock a critical section for the given node id during connection establishment
-    fn with_establish_lock<T>(&self, node_id: &NodeId, func: impl Fn() -> T) -> T {
+    pub fn with_establish_lock<T>(&self, node_id: &NodeId, func: impl FnOnce() -> T) -> T {
         // Return the lock for the given node id. If no lock exists create a new one and return it.
         let nid_lock = {
             let mut establish_locks = acquire_lock!(self.establish_locks);
@@ -209,8 +209,8 @@ impl ConnectionManager {
     }
 
     /// Get the peer manager
-    pub(crate) fn get_peer_manager(&self) -> Arc<PeerManager> {
-        self.peer_manager.clone()
+    pub(crate) fn peer_manager(&self) -> &PeerManager {
+        &self.peer_manager
     }
 
     pub(crate) fn get_connection(&self, peer: &Peer) -> Option<Arc<PeerConnection>> {

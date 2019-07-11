@@ -23,7 +23,6 @@
 use crate::{
     connection::{ConnectionError, PeerConnectionError},
     connection_manager::ConnectionManagerError,
-    dispatcher::DispatchError,
     message::MessageError,
     peer_manager::{node_id::NodeIdError, PeerManagerError},
 };
@@ -35,7 +34,8 @@ pub enum ControlServiceError {
     #[error(no_from)]
     BindFailed(ConnectionError),
     MessageError(MessageError),
-    DispatchError(DispatchError),
+    /// Received an invalid message which cannot be handled
+    InvalidMessageReceived,
     MessageFormatError(MessageFormatError),
     /// Failed to send control message to worker
     ControlMessageSendFailed,
@@ -57,4 +57,13 @@ pub enum ControlServiceError {
     CipherError(CipherError),
     /// Peer is banned, refusing connection request
     PeerBanned,
+    /// An invalid control message type was received
+    InvalidControlMessageType,
+    /// Received message with an invalid signature
+    InvalidMessageSignature,
+    // Client Errors
+    /// Received an unexpected reply
+    ClientUnexpectedReply,
+    /// Reply timed out
+    ClientTimeout,
 }

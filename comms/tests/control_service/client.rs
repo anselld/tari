@@ -20,22 +20,41 @@
 //  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use super::error::ControlServiceError;
-use serde::{Deserialize, Serialize};
+use crate::support::factories::{self, TestFactory};
+use std::{sync::Arc, time::Duration};
+use tari_comms::{
+    connection::{Connection, Direction, InprocAddress, ZmqContext},
+    control_service::{messages::Ping, ControlServiceClient},
+};
 
-/// Control Messages for the control service worker
-#[derive(Debug)]
-pub enum ControlMessage {
-    Shutdown,
-}
+#[test]
+fn send_ping_recv_pong() {
+    let context = ZmqContext::new();
+    let address = InprocAddress::random();
 
-/// ControlService result type
-pub type Result<T> = std::result::Result<T, ControlServiceError>;
+    let outbound_conn = Connection::new(&context, Direction::Outbound)
+        .establish(&address)
+        .unwrap();
+    let inbound_conn = Connection::new(&context, Direction::Inbound)
+        .establish(&address)
+        .unwrap();
 
-/// Control service message types
-#[derive(Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum ControlServiceMessageType {
-    RequestConnection,
-    Ping,
-    Pong,
+    let node_identity_1 = factories::node_identity::create().build().map(Arc::new).unwrap();
+    let node_identity_2 = factories::node_identity::create().build().map(Arc::new).unwrap();
+
+    let out_client = ControlServiceClient::new(
+        node_identity_1.clone(),
+        node_identity_2.identity.public_key.clone(),
+        outbound_conn,
+    );
+    out_client.send_ping().unwrap();
+
+    let in_client = ControlServiceClient::new(
+        node_identity_2.clone(),
+        node_identity_1.identity.public_key.clone(),
+        inbound_conn,
+    );
+
+    let msg = in_client.receive_message(Duration::from_millis(2000)).unwrap().unwrap();
+    let _msg: Ping = msg.deserialize_message().unwrap();
 }

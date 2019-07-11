@@ -20,22 +20,29 @@
 //  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use super::error::ControlServiceError;
+use crate::{
+    connection::{net_address::NetAddress, zmq::CurvePublicKey},
+    peer_manager::NodeId,
+};
 use serde::{Deserialize, Serialize};
 
-/// Control Messages for the control service worker
-#[derive(Debug)]
-pub enum ControlMessage {
-    Shutdown,
+/// This represents a request to open a peer connection
+/// to a remote peer.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RequestConnection {
+    pub control_service_address: NetAddress,
+    /// The zeroMQ Curve public key to use for the peer connection
+    pub server_key: CurvePublicKey,
+    /// The node id of this node
+    pub node_id: NodeId,
+    /// The address to which to connect
+    pub address: NetAddress,
 }
 
-/// ControlService result type
-pub type Result<T> = std::result::Result<T, ControlServiceError>;
+/// Sent to the control service to test liveness
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Ping;
 
-/// Control service message types
-#[derive(Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum ControlServiceMessageType {
-    RequestConnection,
-    Ping,
-    Pong,
-}
+/// Sent from the control service in response to a Ping to indicate liveness
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Pong;

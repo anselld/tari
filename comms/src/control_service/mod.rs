@@ -68,8 +68,9 @@
 //!
 //! service.shutdown().unwrap();
 //! ```
+mod client;
 mod error;
-pub mod handlers;
+pub mod messages;
 mod service;
 mod types;
 mod worker;
@@ -77,5 +78,6 @@ mod worker;
 pub use self::{
     error::ControlServiceError,
     service::{ControlService, ControlServiceConfig, ControlServiceHandle},
-    types::{ControlServiceMessageContext, ControlServiceMessageType},
+    types::ControlServiceMessageType,
+    client::ControlServiceClient,
 };
